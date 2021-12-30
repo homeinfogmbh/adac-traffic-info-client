@@ -117,7 +117,7 @@ def get_traffic_news(
     return post(URL, json=query, headers=get_headers(query)).json()
 
 
-def get_args(description: str = __doc__) -> Namespace:
+def get_args(*, description: str = __doc__) -> Namespace:
     """Return the parsed command line arguments."""
 
     parser = ArgumentParser(description=description)
