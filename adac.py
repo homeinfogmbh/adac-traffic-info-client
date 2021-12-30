@@ -1,3 +1,4 @@
+#! /usr/bin/env python3
 """ADAC traffic news API Client."""
 
 from argparse import ArgumentParser, Namespace
