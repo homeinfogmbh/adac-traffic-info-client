@@ -1,12 +1,13 @@
 """ADAC API."""
 
-from enum import Enum
 from functools import cache
 from hashlib import md5
 from json import dumps
 from sys import argv
 
 from requests import post
+
+from mdb import State
 
 
 URL = 'https://www.adac.de/bff'
@@ -58,32 +59,6 @@ fragment TrafficNewsNonDirectionHeadline on TrafficNewsNonDirectionHeadline {
 '''
 
 
-class State(Enum):
-    """German states."""
-
-    BW = 'Baden-Württemberg'
-    BY = 'Bayern'
-    BE = 'Berlin'
-    BB = 'Brandenburg'
-    HB = 'Bremen'
-    HH = 'Hamburg'
-    HE = 'Hessen'
-    MV = 'Mecklenburg-Vorpommern'
-    NI = 'Niedersachsen'
-    NW = 'Nordrhein-Westfalen'
-    RP = 'Rheinland-Pfalz'
-    SL = 'Saarland'
-    SN = 'Sachsen'
-    ST = 'Sachsen-Anhalt'
-    SH = 'Schleswig-Holstein'
-    TH = 'Thüringen'
-
-    @property
-    def md5hash(self) -> str:
-        """Returns an MD5 hash of the state."""
-        return md5hash(self.name)
-
-
 @cache
 def md5hash(string: str) -> str:
     """Hashes the given string and return the hex digest."""
@@ -99,7 +74,7 @@ def get_headers(state: State) -> dict[str, str]:
         # We need to provide a hash to distinguish queries for different
         # states from each other. Otherwise the API will return the result
         # of last query regardless of the sent parameters.
-        'x-graphql-query-hash': state.md5hash
+        'x-graphql-query-hash': md5hash(state.name)
     }
 
 
