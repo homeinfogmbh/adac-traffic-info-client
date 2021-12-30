@@ -5,7 +5,7 @@ FILE_LIST = ./.installed_files.txt
 default: | pull clean test install
 
 test:
-	PYTHONPATH=. pytest
+	pytest
 
 install:
 	@ ./setup.py install --record $(FILE_LIST)
