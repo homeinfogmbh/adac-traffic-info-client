@@ -9,8 +9,7 @@ from requests import post
 
 
 URL = 'https://www.adac.de/bff'
-
-QUERY_TRAFFIC_NEWS = '''query TrafficNews($filter: TrafficNewsFilterInput!) {
+QUERY = '''query TrafficNews($filter: TrafficNewsFilterInput!) {
   trafficNews(filter: $filter) {
     ...TrafficNewsItems
     __typename
@@ -110,7 +109,7 @@ def news_query(state: State, *, country: str = 'D', street: str = '',
                 }
             }
         },
-        'query': QUERY_TRAFFIC_NEWS
+        'query': QUERY
     }
 
 
