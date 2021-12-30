@@ -4,10 +4,14 @@ from functools import cache
 from hashlib import md5
 from json import dumps
 from sys import argv
+from typing import Any
 
 from requests import post
 
 from mdb import State
+
+
+__all__ = ['get_traffic_news']
 
 
 URL = 'https://www.adac.de/bff'
@@ -101,12 +105,28 @@ def news_query(state: State, *, country: str = 'D', street: str = '',
     }
 
 
+def get_traffic_news(
+        state: State, *, country: str = 'D', street: str = '',
+        construction_sites: bool = False, traffic_news: bool = True,
+        page_number: int = 1) -> dict[str, Any]:
+    """Returns a traffic news dict."""
+
+    return post(
+        URL,
+        json=news_query(
+            state, country=country, street=street, traffic_news=traffic_news,
+            construction_sites=construction_sites, page_number=page_number
+        ),
+        headers=get_headers(state)
+    ).json()
+
+
 def main() -> None:
     """Runs the script."""
 
     state = State[argv[1].upper()]
-    response = post(URL, json=news_query(state), headers=get_headers(state))
-    print(dumps(response.json(), indent=2))
+    json = get_traffic_news(state)
+    print(dumps(json, indent=2))
 
 
 if __name__ == '__main__':
