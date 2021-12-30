@@ -70,7 +70,7 @@ def md5hash(string: str) -> str:
     return md5(string.encode()).hexdigest()
 
 
-def get_headers(state: State) -> dict[str, str]:
+def get_headers(query: dict[str, Any]) -> dict[str, str]:
     """Returns the headers for the request."""
 
     return {
@@ -78,7 +78,7 @@ def get_headers(state: State) -> dict[str, str]:
         # We need to provide a hash to distinguish queries for different
         # states from each other. Otherwise the API will return the result
         # of last query regardless of the sent parameters.
-        'x-graphql-query-hash': md5hash(state.name)
+        'x-graphql-query-hash': md5hash(dumps(query))
     }
 
 
@@ -111,14 +111,11 @@ def get_traffic_news(
         page_number: int = 1) -> dict[str, Any]:
     """Returns a traffic news dict."""
 
-    return post(
-        URL,
-        json=news_query(
-            state, country=country, street=street, traffic_news=traffic_news,
-            construction_sites=construction_sites, page_number=page_number
-        ),
-        headers=get_headers(state)
-    ).json()
+    query = news_query(
+        state, country=country, street=street, traffic_news=traffic_news,
+        construction_sites=construction_sites, page_number=page_number
+    )
+    return post(URL, json=query, headers=get_headers(query)).json()
 
 
 def get_args(description: str = __doc__) -> Namespace:
