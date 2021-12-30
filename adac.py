@@ -8,8 +8,6 @@ from typing import Any
 
 from requests import post
 
-from mdb import State
-
 
 __all__ = ['get_traffic_news']
 
@@ -82,7 +80,7 @@ def get_headers(query: dict[str, Any]) -> dict[str, str]:
     }
 
 
-def news_query(state: State, *, country: str = 'D', street: str = '',
+def news_query(state: str, *, country: str = 'D', street: str = '',
                construction_sites: bool = False, traffic_news: bool = True,
                page_number: int = 1) -> dict[str, str]:
     """Returns a traffic news query."""
@@ -93,7 +91,7 @@ def news_query(state: State, *, country: str = 'D', street: str = '',
             'filter': {
                 'country': {
                     'country': country,
-                    'federalState': state.name,
+                    'federalState': state,
                     'street': street,
                     'showConstructionSites': construction_sites,
                     'showTrafficNews': traffic_news,
@@ -106,7 +104,7 @@ def news_query(state: State, *, country: str = 'D', street: str = '',
 
 
 def get_traffic_news(
-        state: State, *, country: str = 'D', street: str = '',
+        state: str, *, country: str = 'D', street: str = '',
         construction_sites: bool = False, traffic_news: bool = True,
         page_number: int = 1) -> dict[str, Any]:
     """Returns a traffic news dict."""
@@ -122,7 +120,7 @@ def get_args(description: str = __doc__) -> Namespace:
     """Return the parsed command line arguments."""
 
     parser = ArgumentParser(description=description)
-    parser.add_argument('state', type=State.from_string)
+    parser.add_argument('state')
     parser.add_argument('-C', '--country', metavar='country', default='D')
     parser.add_argument('-s', '--street', metavar='street')
     parser.add_argument('-n', '--no-traffic-news', action='store_true')

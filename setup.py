@@ -14,7 +14,7 @@ setup(
     author_email='<info at homeinfo dot de>',
     maintainer='Richard Neumann',
     maintainer_email='<r dot neumann at homeinfo priod de>',
-    install_requires=['mdb', 'requests'],
+    install_requires=['requests'],
     py_modules=['adac'],
     entry_points={'console_scripts': ['adaclt = adac:main']},
     description='ADAC traffic news API client.'
