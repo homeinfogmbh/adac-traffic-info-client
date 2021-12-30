@@ -98,7 +98,7 @@ def get_headers(state: State) -> dict[str, str]:
         'content-type': 'application/json',
         # We need to provide a hash to distinguish queries for different
         # states from each other. Otherwise the API will return the result
-        # of last query regardless the sent parameters.
+        # of last query regardless of the sent parameters.
         'x-graphql-query-hash': state.md5hash
     }
 
