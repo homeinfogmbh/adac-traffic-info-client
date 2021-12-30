@@ -1,9 +1,9 @@
-"""ADAC API."""
+"""ADAC traffic news API Client."""
 
+from argparse import ArgumentParser, Namespace
 from functools import cache
 from hashlib import md5
 from json import dumps
-from sys import argv
 from typing import Any
 
 from requests import post
@@ -121,11 +121,28 @@ def get_traffic_news(
     ).json()
 
 
+def get_args(description: str = __doc__) -> Namespace:
+    """Return the parsed command line arguments."""
+
+    parser = ArgumentParser(description=description)
+    parser.add_argument('state', type=State.from_string)
+    parser.add_argument('-C', '--country', metavar='country', default='D')
+    parser.add_argument('-s', '--street', metavar='street')
+    parser.add_argument('-n', '--no-traffic-news', action='store_true')
+    parser.add_argument('-c', '--construction-sites', action='store_true')
+    parser.add_argument('-p', '--page', type=int, metavar='n', default=1)
+    return parser.parse_args()
+
+
 def main() -> None:
     """Runs the script."""
 
-    state = State[argv[1].upper()]
-    json = get_traffic_news(state)
+    args = get_args()
+    json = get_traffic_news(
+        args.state, country=args.country, street=args.street,
+        traffic_news=not args.no_traffic_news, page_number=args.page,
+        construction_sites=args.construction_sites
+    )
     print(dumps(json, indent=2))
 
 
