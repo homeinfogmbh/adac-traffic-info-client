@@ -75,8 +75,8 @@ def get_headers(query: dict[str, Any]) -> dict[str, str]:
 
     return {
         'content-type': 'application/json',
-        # We need to provide a hash to distinguish queries for different
-        # states from each other. Otherwise the API will return the result
+        # We need to provide a hash to distinguish queries with different
+        # parameters from each other. Otherwise the API will return the result
         # of last query regardless of the sent parameters.
         'x-graphql-query-hash': md5hash(dumps(query))
     }
