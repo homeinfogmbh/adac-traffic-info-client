@@ -2,7 +2,6 @@
 """ADAC traffic news API Client."""
 
 from argparse import ArgumentParser, Namespace
-from functools import cache
 from hashlib import md5
 from json import dumps
 from typing import Any
@@ -62,7 +61,6 @@ fragment TrafficNewsNonDirectionHeadline on TrafficNewsNonDirectionHeadline {
 '''
 
 
-@cache
 def md5hash(string: str) -> str:
     """Hashes the given string and return the hex digest."""
 
