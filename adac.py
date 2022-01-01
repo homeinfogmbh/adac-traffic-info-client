@@ -160,10 +160,11 @@ def get_traffic_news(
         method='POST',
         url='https://www.adac.de/bff',
         headers={'Accept': 'application/json'},
-        json=news_request.to_json(),
+        json=news_request.query,
     )
     prepared = session.prepare_request(request)
     prepared.headers['x-graphql-query-hash'] = md5(prepared.body).hexdigest()
+    
     with session.send(prepared) as response:
         response.raise_for_status()
         json = response.json()
