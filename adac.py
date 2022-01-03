@@ -167,7 +167,7 @@ class NewsResponse(NamedTuple):
 
         if self.street_number:
             yield f'Straße: {self.street_number} {self.street}'
-        else:
+        elif self.street:
             yield f'Straße: {self.street}'
 
         if self.headline:
