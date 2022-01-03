@@ -191,10 +191,9 @@ def get_args(*, description: str = __doc__) -> Namespace:
 
     parser = ArgumentParser(description=description)
     parser.add_argument('state')
-    parser.add_argument('-C', '--country', metavar='country', default='D')
+    parser.add_argument('-c', '--country', metavar='country', default='D')
     parser.add_argument('-s', '--street', metavar='street')
-    parser.add_argument('-c', '--construction-sites', action='store_true')
-    parser.add_argument('-p', '--page', type=int, metavar='n', default=1)
+    parser.add_argument('-o', '--construction-sites', action='store_true')
     return parser.parse_args()
 
 
