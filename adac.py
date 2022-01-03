@@ -176,14 +176,17 @@ def get_traffic_news(
     ) -> Iterator[NewsResponse]:
     """Query traffic news."""
 
-    for page in count(1):
-        data = get_traffic_news_page(session, request, page)
+    items = 0
 
-        for index, news in enumerate(data['items'], start=1):
+    for page in count(1):
+        json = get_traffic_news_page(session, request, page)
+
+        for news in json['items']:
+            items += 1
             yield NewsResponse.from_json(news)
 
-            if page * index >= data['size']:
-                return
+        if items >= json['size']:
+            break
 
 
 def get_args(*, description: str = __doc__) -> Namespace:
