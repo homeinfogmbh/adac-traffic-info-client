@@ -131,9 +131,9 @@ class NewsResponse(NamedTuple):
     id: int
     type: str
     country: Optional[str]
+    headline: Optional[NewsHeadline]
     street: str
     street_number: Optional[str]
-    headline: Optional[NewsHeadline]
     details: str
 
     def __str__(self) -> str:
@@ -150,17 +150,20 @@ class NewsResponse(NamedTuple):
         return cls(
             id=json['id'],
             type=json['type'],
-            details=json['details'],
-            street_number=street_info.get('streetNumber'),
-            street=json['street'],
             country=street_info.get('country'),
-            headline=headline
+            headline=headline,
+            street=json['street'],
+            street_number=street_info.get('streetNumber'),
+            details=json['details']
         )
 
     @property
     def lines(self) -> Iterator[str]:
         """Yield lines for str representation."""
         yield f'Sorte: {self.type}'
+
+        if self.headline:
+            yield str(self.headline)
 
         if self.country:
             yield f'Land: {self.country}'
@@ -169,9 +172,6 @@ class NewsResponse(NamedTuple):
             yield f'Straße: {self.street_number} {self.street}'
         elif self.street:
             yield f'Straße: {self.street}'
-
-        if self.headline:
-            yield str(self.headline)
 
         yield f'Einzelheiten: {self.details}'
 
