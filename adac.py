@@ -102,6 +102,29 @@ class NewsRequest(NamedTuple):
         }
 
 
+class NewsHeadline(NamedTuple):
+    """A news headline."""
+
+    text: Optional[str]
+    start: Optional[str]
+    end: Optional[str]
+
+    def __str__(self) -> str:
+        if self.text is not None:
+            return self.text
+
+        return f'Zwischen {self.start} und {self.end}'
+
+    @classmethod
+    def from_json(cls, json: dict[str, Any]) -> NewsHeadline:
+        """Create a headline from a JSON-ish dict."""
+        return cls(
+            text=json.get('text'),
+            start=json.get('from'),
+            end=json.get('to')
+        )
+
+
 class NewsResponse(NamedTuple):
     """representation of a traffic mews response."""
 
@@ -110,7 +133,7 @@ class NewsResponse(NamedTuple):
     country: Optional[str]
     street: str
     street_number: Optional[str]
-    headline: Optional[str]
+    headline: Optional[NewsHeadline]
     details: str
 
     def __str__(self) -> str:
@@ -121,6 +144,9 @@ class NewsResponse(NamedTuple):
         """Create a response from a JSON-ish dict."""
         street_info = json.get('streetSign') or {}
 
+        if headline := json['headline']:
+            headline = NewsHeadline.from_json(headline)
+
         return cls(
             id=json['id'],
             type=json['type'],
@@ -128,7 +154,7 @@ class NewsResponse(NamedTuple):
             street_number=street_info.get('streetNumber'),
             street=json['street'],
             country=street_info.get('country'),
-            headline=json['headline'].get('text'),
+            headline=headline,
         )
 
     @property
@@ -145,7 +171,7 @@ class NewsResponse(NamedTuple):
             yield f'Straße: {self.street}'
 
         if self.headline:
-            yield f'Überschrift: {self.headline}'
+            yield str(self.headline)
 
         yield f'Einzelheiten: {self.details}'
 
