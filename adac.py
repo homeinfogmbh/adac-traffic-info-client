@@ -160,10 +160,10 @@ class NewsResponse(NamedTuple):
     @property
     def lines(self) -> Iterator[str]:
         """Yield lines for str representation."""
-        yield f'Sorte: {self.type.capitalize()}'
-
         if self.headline:
-            yield str(self.headline)
+            yield f'{self.type.capitalize()}: {self.headline}'
+        else:
+            yield f'{self.type.capitalize()}'
 
         if self.country:
             yield f'Land: {self.country}'
