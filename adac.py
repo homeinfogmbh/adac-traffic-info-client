@@ -4,6 +4,7 @@
 from __future__ import annotations
 from argparse import ArgumentParser, Namespace
 from hashlib import md5
+from itertools import count
 from os import linesep
 from typing import Any, Iterator, NamedTuple, Optional
 
@@ -70,7 +71,6 @@ class NewsRequest(NamedTuple):
     street: str = ''
     construction_sites: bool = False
     traffic_news: bool = True
-    page_number: int = 1
 
     @classmethod
     def from_args(cls, args: Namespace) -> NewsRequest:
@@ -79,11 +79,10 @@ class NewsRequest(NamedTuple):
             country=args.country,
             state=args.state,
             street=args.street,
-            construction_sites=args.construction_sites,
-            page_number=args.page,
+            construction_sites=args.construction_sites
         )
 
-    def to_json(self) -> dict[str, Any]:
+    def query(self, page: int = 1) -> dict[str, Any]:
         """Return a JSON-ish dict of the query."""
         return {
             'operationName': 'TrafficNews',
@@ -95,7 +94,7 @@ class NewsRequest(NamedTuple):
                         'street': self.street,
                         'showConstructionSites': self.construction_sites,
                         'showTrafficNews': self.traffic_news,
-                        'pageNumber': self.page_number
+                        'pageNumber': page
                     }
                 }
             },
@@ -151,26 +150,40 @@ class NewsResponse(NamedTuple):
         yield f'Einzelheiten: {self.details}'
 
 
-def get_traffic_news(
-            session: Session,
-            news_request: NewsRequest
-        ) -> Iterator[NewsResponse]:
-    """Query traffic news."""
+def get_traffic_news_page(
+    session: Session,
+    news_request: NewsRequest,
+    page: int,
+) -> dict[str, Any]:
+    """Returns the given page of the requested traffic news."""
+
     request = Request(
-        method='POST',
-        url='https://www.adac.de/bff',
+        method='POST', url=URL,
         headers={'Accept': 'application/json'},
-        json=news_request.to_json(),
+        json=news_request.query(page)
     )
     prepared = session.prepare_request(request)
     prepared.headers['x-graphql-query-hash'] = md5(prepared.body).hexdigest()
 
     with session.send(prepared) as response:
         response.raise_for_status()
-        json = response.json()
+        return response.json()['data']['trafficNews']
 
-    for data in json['data']['trafficNews']['items']:
-        yield NewsResponse.from_json(data)
+
+def get_traffic_news(
+        session: Session,
+        request: NewsRequest
+    ) -> Iterator[NewsResponse]:
+    """Query traffic news."""
+
+    for page in count(1):
+        data = get_traffic_news_page(session, request, page)
+
+        for index, news in enumerate(data['items'], start=1):
+            yield NewsResponse.from_json(news)
+
+            if page * index >= data['size']:
+                return
 
 
 def get_args(*, description: str = __doc__) -> Namespace:
