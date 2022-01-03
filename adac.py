@@ -140,7 +140,7 @@ class NewsResponse(NamedTuple):
         return linesep.join(self.lines)
 
     @classmethod
-    def from_json(cls, json: dict[str, Any]) -> 'NewsResponse':
+    def from_json(cls, json: dict[str, Any]) -> NewsResponse:
         """Create a response from a JSON-ish dict."""
         street_info = json.get('streetSign') or {}
 
