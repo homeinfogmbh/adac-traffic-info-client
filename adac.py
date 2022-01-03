@@ -154,7 +154,7 @@ class NewsResponse(NamedTuple):
             street_number=street_info.get('streetNumber'),
             street=json['street'],
             country=street_info.get('country'),
-            headline=headline,
+            headline=headline
         )
 
     @property
