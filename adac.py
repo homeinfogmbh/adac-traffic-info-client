@@ -1,12 +1,14 @@
 #! /usr/bin/env python3
 """ADAC traffic news API Client."""
 
+from __future__ import annotations
 from argparse import ArgumentParser, Namespace
 from hashlib import md5
-from json import dumps
-from typing import Any
+from itertools import count
+from os import linesep
+from typing import Any, Iterator, NamedTuple, Optional
 
-from requests import post
+from requests import Request, Session
 
 
 __all__ = ['get_traffic_news']
@@ -61,58 +63,156 @@ fragment TrafficNewsNonDirectionHeadline on TrafficNewsNonDirectionHeadline {
 '''
 
 
-def md5hash(string: str) -> str:
-    """Hashes the given string and return the hex digest."""
+class NewsRequest(NamedTuple):
+    """Represents a request for traffic news."""
 
-    return md5(string.encode()).hexdigest()
+    country: str = 'D'
+    state: str = ''
+    street: str = ''
+    construction_sites: bool = False
+    traffic_news: bool = True
 
+    @classmethod
+    def from_args(cls, args: Namespace) -> NewsRequest:
+        """Create a new request from parsed arguments."""
+        return cls(
+            country=args.country,
+            state=args.state,
+            street=args.street,
+            construction_sites=args.construction_sites
+        )
 
-def get_headers(query: dict[str, Any]) -> dict[str, str]:
-    """Returns the headers for the request."""
-
-    return {
-        'content-type': 'application/json',
-        # We need to provide a hash to distinguish queries with different
-        # parameters from each other. Otherwise the API will return the result
-        # of last query regardless of the sent parameters.
-        'x-graphql-query-hash': md5hash(dumps(query))
-    }
-
-
-def news_query(state: str, *, country: str = 'D', street: str = '',
-               construction_sites: bool = False, traffic_news: bool = True,
-               page_number: int = 1) -> dict[str, str]:
-    """Returns a traffic news query."""
-
-    return {
-        'operationName': 'TrafficNews',
-        'variables': {
-            'filter': {
-                'country': {
-                    'country': country,
-                    'federalState': state,
-                    'street': street,
-                    'showConstructionSites': construction_sites,
-                    'showTrafficNews': traffic_news,
-                    'pageNumber': page_number
+    def query(self, page: int = 1) -> dict[str, Any]:
+        """Return a JSON-ish dict of the query."""
+        return {
+            'operationName': 'TrafficNews',
+            'variables': {
+                'filter': {
+                    'country': {
+                        'country': self.country,
+                        'federalState': self.state,
+                        'street': self.street,
+                        'showConstructionSites': self.construction_sites,
+                        'showTrafficNews': self.traffic_news,
+                        'pageNumber': page
+                    }
                 }
-            }
-        },
-        'query': QUERY
-    }
+            },
+            'query': QUERY
+        }
+
+
+class NewsHeadline(NamedTuple):
+    """A news headline."""
+
+    text: Optional[str]
+    start: Optional[str]
+    end: Optional[str]
+
+    def __str__(self) -> str:
+        if self.text is not None:
+            return self.text
+
+        return f'Zwischen {self.start} und {self.end}'
+
+    @classmethod
+    def from_json(cls, json: dict[str, Any]) -> NewsHeadline:
+        """Create a headline from a JSON-ish dict."""
+        return cls(
+            text=json.get('text'),
+            start=json.get('from'),
+            end=json.get('to')
+        )
+
+
+class NewsResponse(NamedTuple):
+    """representation of a traffic mews response."""
+
+    id: int
+    type: str
+    country: Optional[str]
+    headline: Optional[NewsHeadline]
+    street: str
+    street_number: Optional[str]
+    details: str
+
+    def __str__(self) -> str:
+        return linesep.join(self.lines)
+
+    @classmethod
+    def from_json(cls, json: dict[str, Any]) -> NewsResponse:
+        """Create a response from a JSON-ish dict."""
+        street_info = json.get('streetSign') or {}
+
+        if headline := json['headline']:
+            headline = NewsHeadline.from_json(headline)
+
+        return cls(
+            id=json['id'],
+            type=json['type'],
+            country=street_info.get('country'),
+            headline=headline,
+            street=json['street'],
+            street_number=street_info.get('streetNumber'),
+            details=json['details']
+        )
+
+    @property
+    def lines(self) -> Iterator[str]:
+        """Yield lines for str representation."""
+        if self.headline:
+            yield f'{self.type.capitalize()}: {self.headline}'
+        else:
+            yield f'{self.type.capitalize()}'
+
+        if self.country:
+            yield f'Land: {self.country}'
+
+        if self.street_number:
+            yield f'Straße: {self.street_number} {self.street}'
+        elif self.street:
+            yield f'Straße: {self.street}'
+
+        yield f'Einzelheiten: {self.details}'
+
+
+def get_traffic_news_page(
+    session: Session,
+    news_request: NewsRequest,
+    page: int,
+) -> dict[str, Any]:
+    """Returns the given page of the requested traffic news."""
+
+    request = Request(
+        method='POST', url=URL,
+        headers={'Accept': 'application/json'},
+        json=news_request.query(page)
+    )
+    prepared = session.prepare_request(request)
+    prepared.headers['x-graphql-query-hash'] = md5(prepared.body).hexdigest()
+
+    with session.send(prepared) as response:
+        response.raise_for_status()
+        return response.json()['data']['trafficNews']
 
 
 def get_traffic_news(
-        state: str, *, country: str = 'D', street: str = '',
-        construction_sites: bool = False, traffic_news: bool = True,
-        page_number: int = 1) -> dict[str, Any]:
-    """Returns a traffic news dict."""
+        session: Session,
+        request: NewsRequest
+    ) -> Iterator[NewsResponse]:
+    """Query traffic news."""
 
-    query = news_query(
-        state, country=country, street=street, traffic_news=traffic_news,
-        construction_sites=construction_sites, page_number=page_number
-    )
-    return post(URL, json=query, headers=get_headers(query)).json()
+    items = 0
+
+    for page in count(1):
+        json = get_traffic_news_page(session, request, page)
+
+        for news in json['items']:
+            items += 1
+            yield NewsResponse.from_json(news)
+
+        if items >= json['size']:
+            break
 
 
 def get_args(*, description: str = __doc__) -> Namespace:
@@ -120,24 +220,20 @@ def get_args(*, description: str = __doc__) -> Namespace:
 
     parser = ArgumentParser(description=description)
     parser.add_argument('state')
-    parser.add_argument('-C', '--country', metavar='country', default='D')
+    parser.add_argument('-c', '--country', metavar='country', default='D')
     parser.add_argument('-s', '--street', metavar='street')
-    parser.add_argument('-n', '--no-traffic-news', action='store_true')
-    parser.add_argument('-c', '--construction-sites', action='store_true')
-    parser.add_argument('-p', '--page', type=int, metavar='n', default=1)
+    parser.add_argument('-o', '--construction-sites', action='store_true')
     return parser.parse_args()
 
 
 def main() -> None:
     """Runs the script."""
 
-    args = get_args()
-    json = get_traffic_news(
-        args.state, country=args.country, street=args.street,
-        traffic_news=not args.no_traffic_news, page_number=args.page,
-        construction_sites=args.construction_sites
-    )
-    print(dumps(json, indent=2))
+    request = NewsRequest.from_args(get_args())
+
+    with Session() as session:
+        for news in get_traffic_news(session, request):
+            print(news)
 
 
 if __name__ == '__main__':
