@@ -128,7 +128,4 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-.eggs/
-.pytest_cache
-*.egg-info
-venv/
+.idea/
