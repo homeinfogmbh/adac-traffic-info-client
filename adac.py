@@ -126,7 +126,7 @@ class NewsHeadline(NamedTuple):
 
 
 class NewsResponse(NamedTuple):
-    """representation of a traffic mews response."""
+    """Representation of a response for traffic mews."""
 
     id: int
     type: str
@@ -199,7 +199,7 @@ def get_traffic_news_page(
 def get_traffic_news(
         session: Session,
         request: NewsRequest
-    ) -> Iterator[NewsResponse]:
+) -> Iterator[NewsResponse]:
     """Query traffic news."""
 
     items = 0
