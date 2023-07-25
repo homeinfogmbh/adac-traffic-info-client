@@ -11,11 +11,11 @@ from typing import Any, Iterator, NamedTuple, Optional
 from requests import Request, Session
 
 
-__all__ = ['get_traffic_news']
+__all__ = ["get_traffic_news"]
 
 
-URL = 'https://www.adac.de/bff'
-QUERY = '''query TrafficNews($filter: TrafficNewsFilterInput!) {
+URL = "https://www.adac.de/bff"
+QUERY = """query TrafficNews($filter: TrafficNewsFilterInput!) {
   trafficNews(filter: $filter) {
     ...TrafficNewsItems
     __typename
@@ -60,15 +60,15 @@ fragment TrafficNewsNonDirectionHeadline on TrafficNewsNonDirectionHeadline {
   text
   __typename
 }
-'''
+"""
 
 
 class NewsRequest(NamedTuple):
     """Represents a request for traffic news."""
 
-    country: str = 'D'
-    state: str = ''
-    street: str = ''
+    country: str = "D"
+    state: str = ""
+    street: str = ""
     construction_sites: bool = False
     traffic_news: bool = True
 
@@ -79,26 +79,26 @@ class NewsRequest(NamedTuple):
             country=args.country,
             state=args.state,
             street=args.street,
-            construction_sites=args.construction_sites
+            construction_sites=args.construction_sites,
         )
 
     def query(self, page: int = 1) -> dict[str, Any]:
         """Return a JSON-ish dict of the query."""
         return {
-            'operationName': 'TrafficNews',
-            'variables': {
-                'filter': {
-                    'country': {
-                        'country': self.country,
-                        'federalState': self.state,
-                        'street': self.street,
-                        'showConstructionSites': self.construction_sites,
-                        'showTrafficNews': self.traffic_news,
-                        'pageNumber': page
+            "operationName": "TrafficNews",
+            "variables": {
+                "filter": {
+                    "country": {
+                        "country": self.country,
+                        "federalState": self.state,
+                        "street": self.street,
+                        "showConstructionSites": self.construction_sites,
+                        "showTrafficNews": self.traffic_news,
+                        "pageNumber": page,
                     }
                 }
             },
-            'query': QUERY
+            "query": QUERY,
         }
 
 
@@ -113,16 +113,12 @@ class NewsHeadline(NamedTuple):
         if self.text is not None:
             return self.text
 
-        return f'Zwischen {self.start} und {self.end}'
+        return f"Zwischen {self.start} und {self.end}"
 
     @classmethod
     def from_json(cls, json: dict[str, Any]) -> NewsHeadline:
         """Create a headline from a JSON-ish dict."""
-        return cls(
-            text=json.get('text'),
-            start=json.get('from'),
-            end=json.get('to')
-        )
+        return cls(text=json.get("text"), start=json.get("from"), end=json.get("to"))
 
 
 class NewsResponse(NamedTuple):
@@ -142,38 +138,38 @@ class NewsResponse(NamedTuple):
     @classmethod
     def from_json(cls, json: dict[str, Any]) -> NewsResponse:
         """Create a response from a JSON-ish dict."""
-        street_info = json.get('streetSign') or {}
+        street_info = json.get("streetSign") or {}
 
-        if headline := json['headline']:
+        if headline := json["headline"]:
             headline = NewsHeadline.from_json(headline)
 
         return cls(
-            id=json['id'],
-            type=json['type'],
-            country=street_info.get('country'),
+            id=json["id"],
+            type=json["type"],
+            country=street_info.get("country"),
             headline=headline,
-            street=json['street'],
-            street_number=street_info.get('streetNumber'),
-            details=json['details']
+            street=json["street"],
+            street_number=street_info.get("streetNumber"),
+            details=json["details"],
         )
 
     @property
     def lines(self) -> Iterator[str]:
         """Yield lines for str representation."""
         if self.headline:
-            yield f'{self.type.capitalize()}: {self.headline}'
+            yield f"{self.type.capitalize()}: {self.headline}"
         else:
-            yield f'{self.type.capitalize()}'
+            yield f"{self.type.capitalize()}"
 
         if self.country:
-            yield f'Land: {self.country}'
+            yield f"Land: {self.country}"
 
         if self.street_number:
-            yield f'Straße: {self.street_number} {self.street}'
+            yield f"Straße: {self.street_number} {self.street}"
         elif self.street:
-            yield f'Straße: {self.street}'
+            yield f"Straße: {self.street}"
 
-        yield f'Einzelheiten: {self.details}'
+        yield f"Einzelheiten: {self.details}"
 
 
 def get_traffic_news_page(
@@ -184,22 +180,20 @@ def get_traffic_news_page(
     """Returns the given page of the requested traffic news."""
 
     request = Request(
-        method='POST', url=URL,
-        headers={'Accept': 'application/json'},
-        json=news_request.query(page)
+        method="POST",
+        url=URL,
+        headers={"Accept": "application/json"},
+        json=news_request.query(page),
     )
     prepared = session.prepare_request(request)
-    prepared.headers['x-graphql-query-hash'] = md5(prepared.body).hexdigest()
+    prepared.headers["x-graphql-query-hash"] = md5(prepared.body).hexdigest()
 
     with session.send(prepared) as response:
         response.raise_for_status()
-        return response.json()['data']['trafficNews']
+        return response.json()["data"]["trafficNews"]
 
 
-def get_traffic_news(
-        session: Session,
-        request: NewsRequest
-) -> Iterator[NewsResponse]:
+def get_traffic_news(session: Session, request: NewsRequest) -> Iterator[NewsResponse]:
     """Query traffic news."""
 
     items = 0
@@ -207,11 +201,11 @@ def get_traffic_news(
     for page in count(1):
         json = get_traffic_news_page(session, request, page)
 
-        for news in json['items']:
+        for news in json["items"]:
             items += 1
             yield NewsResponse.from_json(news)
 
-        if items >= json['size']:
+        if items >= json["size"]:
             break
 
 
@@ -219,10 +213,10 @@ def get_args(*, description: str = __doc__) -> Namespace:
     """Return the parsed command line arguments."""
 
     parser = ArgumentParser(description=description)
-    parser.add_argument('state')
-    parser.add_argument('-c', '--country', metavar='country', default='D')
-    parser.add_argument('-s', '--street', metavar='street')
-    parser.add_argument('-o', '--construction-sites', action='store_true')
+    parser.add_argument("state")
+    parser.add_argument("-c", "--country", metavar="country", default="D")
+    parser.add_argument("-s", "--street", metavar="street")
+    parser.add_argument("-o", "--construction-sites", action="store_true")
     return parser.parse_args()
 
 
@@ -236,5 +230,5 @@ def main() -> None:
             print(news)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
